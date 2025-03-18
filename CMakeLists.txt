@@ -40,6 +40,9 @@ add_executable(simulador-semaforo simulador-semaforo.c )
 pico_set_program_name(simulador-semaforo "simulador-semaforo")
 pico_set_program_version(simulador-semaforo "0.1")
 
+# Adiciona a biblioteca PIO gerada a partir do arquivo .pio
+pico_generate_pio_header(simulador-semaforo ${CMAKE_CURRENT_LIST_DIR}/ws2818b.pio)
+
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(simulador-semaforo 0)
 pico_enable_stdio_usb(simulador-semaforo 1)
@@ -55,7 +58,13 @@ target_include_directories(simulador-semaforo PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(simulador-semaforo 
-        
+    pico_stdlib        
+    hardware_adc     
+    hardware_dma      
+    hardware_pio      
+    hardware_clocks   
+    hardware_pwm      
+    hardware_i2c    
         )
 
 pico_add_extra_outputs(simulador-semaforo)
