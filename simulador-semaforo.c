@@ -155,7 +155,6 @@ void setup_oled(){
     frame_area.start_page = 0;
     frame_area.end_page = ssd1306_n_pages - 1;
 
-
     calculate_render_area_buffer_length(&frame_area);
 
     // Zera o display inteiro
@@ -172,45 +171,79 @@ void setup_oled(){
     display_text(text, 2);
 }
 
+void start_simulator() {
+    char *msg[] = {
+        "  Pressione A e B  ",
+        "  Para Iniciar   "
+    };
+    display_text(msg, 2);
+
+    while (true) {
+        // Verifica se ambos os botões foram pressionados simultaneamente
+        if (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
+            sleep_ms(500);
+            while (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
+                sleep_ms(50); // Aguarda até os botões serem soltos
+            }
+            break;
+        }
+        sleep_ms(20);
+    }
+}
+
 int main() {
-    stdio_init_all();  // Inicializa a comunicação serial
+    stdio_init_all();
     setup_oled();
     desligar_leds();
-    sleep_ms(2000);  // Aguarda 2 segundos para a inicialização do terminal
-
-    printf("[LOG] Inicializando semáforo...\n");
+    sleep_ms(2000);
 
     setup_leds();
     setup_buttons();
     setup_matriz(LED_PIN, LED_COUNT);
 
-    while (true) {
-        if (!gpio_get(BUTTON_A)) {
-            printf("Botão A pressionado (Acelerar)\n");
-            gpio_put(LED_GREEN, 1);
-            gpio_put(LED_RED, 0);
-            last_button_check = time_us_32();
-        } else {
-            gpio_put(LED_GREEN, 0);
-            gpio_put(LED_RED, 0);
-        }
-    
-        if (!gpio_get(BUTTON_B)) {
-            printf("Botão B pressionado (Frear)\n");
-            gpio_put(LED_GREEN, 0);
-            gpio_put(LED_RED, 1);
-            last_button_check = time_us_32();
-        } else {
-            gpio_put(LED_GREEN, 0);
-            gpio_put(LED_RED, 0);
-        }
-        
-        // Controle do semáforo
-        semaforo_amarelo();  
-        semaforo_vermelho();
-        semaforo_verde();  
+    while (true) { 
+        start_simulator(); 
 
-        // Pequeno delay para evitar leituras inconsistentes (debounce simples)
-        sleep_ms(20);
+        printf("[LOG] Iniciando o semáforo...\n");
+        desligar_leds();
+
+        while (true) {
+            // Se os botões A+B forem pressionados, o simulador para e volta ao menu
+            if (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
+                printf("[LOG] Encerrando o simulador...\n");
+                sleep_ms(500);
+                while (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
+                    sleep_ms(50);
+                }
+                desligar_leds();
+                break; 
+            }
+
+            // Controles dos botões
+            if (!gpio_get(BUTTON_A)) {
+                printf("Botão A pressionado (Acelerar)\n");
+                gpio_put(LED_GREEN, 1);
+                gpio_put(LED_RED, 0);
+            } else {
+                gpio_put(LED_GREEN, 0);
+                gpio_put(LED_RED, 0);
+            }
+
+            if (!gpio_get(BUTTON_B)) {
+                printf("Botão B pressionado (Frear)\n");
+                gpio_put(LED_GREEN, 0);
+                gpio_put(LED_RED, 1);
+            } else {
+                gpio_put(LED_RED, 0);
+                gpio_put(LED_GREEN, 0);
+            }
+
+            // Controle do semáforo
+            semaforo_amarelo();  
+            semaforo_vermelho();
+            semaforo_verde();  
+
+            sleep_ms(20);
+        }
     }
 }
