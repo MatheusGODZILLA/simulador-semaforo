@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(simulador-semaforo simulador-semaforo.c )
+add_executable(simulador-semaforo simulador-semaforo.c inc/ssd1306_i2c.c)
 
 pico_set_program_name(simulador-semaforo "simulador-semaforo")
 pico_set_program_version(simulador-semaforo "0.1")
