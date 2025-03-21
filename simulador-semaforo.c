@@ -120,21 +120,22 @@ void setup_matriz(uint pin, uint amount) {
     
     ws2818b_program_init(np_pio, np_sm, offset, LED_PIN, 800000.f);
 
-    setColor(0, 0, 0); // Inicializa os LEDs com cor preta
-    npWrite(); // Aplica a cor inicial
+    setColor(0, 0, 0);
+    npWrite();
 }
 
 void display_text(char *lines[], uint line_count) {
     uint8_t ssd[ssd1306_buffer_length];
     memset(ssd, 0, ssd1306_buffer_length);  // Limpa o display
 
-    int y = 0;
+    int y = (ssd1306_n_pages * 8 - (line_count * 8)) / 2; // Ajuste centralizado verticalmente
     for (uint i = 0; i < line_count; i++) {
-        ssd1306_draw_string(ssd, 5, y, lines[i]);
-        y += 8;
+        ssd1306_draw_string(ssd, 10, y, lines[i]);  // Ajustado para não cortar
+        y += 10; // Espaçamento maior para evitar sobreposição
     }
     render_on_display(ssd, &frame_area);  // Atualiza o display
 }
+
 
 void setup_oled(){
     // Inicialização do i2c
@@ -164,26 +165,28 @@ void setup_oled(){
 
     // Exibir texto no display OLED
     char *text[] = {
-        " Bem-vindos ao ",
-        " Simulador de Semáforo "
+        " Bem-vindos! ",
+        "  Simulador  ",
+        " de Semaforo "
     };
 
-    display_text(text, 2);
+    display_text(text, 3);
 }
 
 void start_simulator() {
     char *msg[] = {
-        "  Pressione A e B  ",
-        "  Para Iniciar   "
+        "   Pressione  ",
+        "     A e B    ",
+        " Para Iniciar "
     };
-    display_text(msg, 2);
+    display_text(msg, 3);
 
     while (true) {
         // Verifica se ambos os botões foram pressionados simultaneamente
         if (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
             sleep_ms(500);
             while (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
-                sleep_ms(50); // Aguarda até os botões serem soltos
+                sleep_ms(50);
             }
             break;
         }
@@ -195,7 +198,7 @@ int main() {
     stdio_init_all();
     setup_oled();
     desligar_leds();
-    sleep_ms(2000);
+    sleep_ms(5000);
 
     setup_leds();
     setup_buttons();
@@ -208,7 +211,6 @@ int main() {
         desligar_leds();
 
         while (true) {
-            // Se os botões A+B forem pressionados, o simulador para e volta ao menu
             if (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
                 printf("[LOG] Encerrando o simulador...\n");
                 sleep_ms(500);
