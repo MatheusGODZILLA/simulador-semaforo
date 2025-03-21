@@ -40,6 +40,28 @@ uint32_t last_time_verde = 0;
 uint32_t last_time_amarelo = 0;
 uint32_t last_button_check = 0;
 
+// Estados do semáforo
+typedef enum {
+    SEMAFORO_VERDE,
+    SEMAFORO_AMARELO,
+    SEMAFORO_VERMELHO
+} EstadoSemaforo;
+
+EstadoSemaforo estado_atual = SEMAFORO_VERMELHO;
+
+// Estado e controle
+int pontuacao = 0;
+bool botao_a_liberado = true;
+bool botao_b_liberado = true;
+bool acionou_botao_durante_amarelo = false;
+bool manteve_acelerando = false;
+bool manteve_freando = false;
+
+char ultima_acao[22] = "";
+char feedback[22] = "";
+
+uint32_t tempo_estado_anterior = 0;
+
 void setup_leds() {
     // Configuração do GPIO do LED como saída
     gpio_init(LED_GREEN);
@@ -83,27 +105,70 @@ void npWrite() {
     sleep_us(100); // Tempo de reset
 }
 
-void semaforo_vermelho() {
-    if (time_us_32() - last_time_vermelho > TEMPO_VERMELHO) {
-        setColor(141, 0, 0);
-        npWrite();
-        last_time_vermelho = time_us_32();
-    }
-}
+void atualizar_semaforo() {
+    uint32_t agora = time_us_32();
 
-void semaforo_verde() {
-    if (time_us_32() - last_time_verde > TEMPO_VERDE) {
-        setColor(0, 141, 0);
-        npWrite();
-        last_time_verde = time_us_32();
-    }
-}
+    switch (estado_atual) {
+        case SEMAFORO_VERDE:
+            if (agora - tempo_estado_anterior > TEMPO_VERDE) {
+                // Avalia se manteve acelerando durante o VERDE
+                if (manteve_acelerando) {
+                    pontuacao++;
+                    strcpy(ultima_acao, "Acelerou no VERDE");
+                    strcpy(feedback, "Correto! +1 ponto");
+                } else {
+                    strcpy(ultima_acao, "Nao acelerou");
+                    strcpy(feedback, "Sem ponto");
+                }
+                manteve_acelerando = false;
 
-void semaforo_amarelo() {
-    if (time_us_32() - last_time_amarelo > TEMPO_AMARELO) {
-        setColor(141, 141, 0);
-        npWrite();
-        last_time_amarelo = time_us_32();
+                estado_atual = SEMAFORO_AMARELO;
+                setColor(141, 141, 0);
+                npWrite();
+                tempo_estado_anterior = agora;
+            }
+            break;
+
+        case SEMAFORO_AMARELO:
+            if (agora - tempo_estado_anterior > TEMPO_AMARELO) {
+                // Avalia se ficou parado
+                if (!acionou_botao_durante_amarelo) {
+                    pontuacao++;
+                    strcpy(ultima_acao, "Esperou no AMARELO");
+                    strcpy(feedback, "Correto! +1 ponto");
+                } else {
+                    strcpy(ultima_acao, "Agiu no AMARELO");
+                    strcpy(feedback, "Sem ponto");
+                }
+
+                acionou_botao_durante_amarelo = false;
+
+                estado_atual = SEMAFORO_VERMELHO;
+                setColor(141, 0, 0);
+                npWrite();
+                tempo_estado_anterior = agora;
+            }
+            break;
+
+        case SEMAFORO_VERMELHO:
+            if (agora - tempo_estado_anterior > TEMPO_VERMELHO) {
+                // Avalia se manteve freando durante o VERMELHO
+                if (manteve_freando) {
+                    pontuacao++;
+                    strcpy(ultima_acao, "Freou no VERMELHO");
+                    strcpy(feedback, "Correto! +1 ponto");
+                } else {
+                    strcpy(ultima_acao, "Nao freou");
+                    strcpy(feedback, "Sem ponto");
+                }
+                manteve_freando = false;
+
+                estado_atual = SEMAFORO_VERDE;
+                setColor(0, 141, 0);
+                npWrite();
+                tempo_estado_anterior = agora;
+            }
+            break;
     }
 }
 
@@ -194,6 +259,44 @@ void start_simulator() {
     }
 }
 
+void avaliar_acao(const char *acao) {
+    if (strcmp(acao, "acelerar") == 0) {
+        strcpy(ultima_acao, "Vc acelerou");
+        if (estado_atual == SEMAFORO_VERDE) {
+            strcpy(feedback, "Mantenha...");
+        } else {
+            pontuacao--;
+            strcpy(feedback, "ERRO!");
+        }
+    } else if (strcmp(acao, "frear") == 0) {
+        strcpy(ultima_acao, "Vc freou");
+        if (estado_atual == SEMAFORO_VERMELHO) {
+            strcpy(feedback, "Mantenha...");
+        } else {
+            pontuacao--;
+            strcpy(feedback, "ERRO!");
+        }
+    }
+}
+
+void atualizar_display_info() {
+    char linha1[22];
+    char linha2[22];
+    sprintf(linha1, "Pont.: %d", pontuacao);
+    sprintf(linha2, "Semaforo: %s",
+        estado_atual == SEMAFORO_VERDE ? "VERDE" :
+        estado_atual == SEMAFORO_AMARELO ? "AMARELO" : "VERMELHO"
+    );
+
+    char *msg[] = {
+        linha1,
+        linha2,
+        ultima_acao[0] ? ultima_acao : "Aguardando...",
+        feedback[0] ? feedback : ""
+    };
+    display_text(msg, 4);
+}
+
 int main() {
     stdio_init_all();
     setup_oled();
@@ -205,10 +308,17 @@ int main() {
     setup_matriz(LED_PIN, LED_COUNT);
 
     while (true) { 
-        start_simulator(); 
+        start_simulator();
 
         printf("[LOG] Iniciando o semáforo...\n");
         desligar_leds();
+
+        estado_atual = SEMAFORO_VERDE;
+        setColor(0, 141, 0);
+        npWrite();
+        tempo_estado_anterior = time_us_32();
+        pontuacao = 0;
+        acionou_botao_durante_amarelo = false;
 
         while (true) {
             if (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
@@ -223,29 +333,53 @@ int main() {
 
             // Controles dos botões
             if (!gpio_get(BUTTON_A)) {
-                printf("Botão A pressionado (Acelerar)\n");
-                gpio_put(LED_GREEN, 1);
-                gpio_put(LED_RED, 0);
+                if (botao_a_liberado) {
+                    avaliar_acao("acelerar");
+                    botao_a_liberado = false;
+                    gpio_put(LED_GREEN, 1);
+                    gpio_put(LED_RED, 0);
+                    manteve_acelerando = true;
+                }
+                if (estado_atual == SEMAFORO_AMARELO)
+                    acionou_botao_durante_amarelo = true;
             } else {
+                botao_a_liberado = true;
                 gpio_put(LED_GREEN, 0);
                 gpio_put(LED_RED, 0);
             }
 
+            // Botao B
             if (!gpio_get(BUTTON_B)) {
-                printf("Botão B pressionado (Frear)\n");
-                gpio_put(LED_GREEN, 0);
-                gpio_put(LED_RED, 1);
+                if (botao_b_liberado) {
+                    avaliar_acao("frear");
+                    botao_b_liberado = false;
+                    gpio_put(LED_GREEN, 0);
+                    gpio_put(LED_RED, 1);
+                    manteve_freando = true;
+                }
+                if (estado_atual == SEMAFORO_AMARELO)
+                    acionou_botao_durante_amarelo = true;
             } else {
-                gpio_put(LED_RED, 0);
+                botao_b_liberado = true;
                 gpio_put(LED_GREEN, 0);
+                gpio_put(LED_RED, 0);
             }
+
+
+            // Atualiza OLED com pontuação, estado do semáforo e última ação
+            atualizar_display_info();
 
             // Controle do semáforo
-            semaforo_amarelo();  
-            semaforo_vermelho();
-            semaforo_verde();  
+            atualizar_semaforo();  
 
             sleep_ms(20);
         }
+
+        char resultado[22];
+        sprintf(resultado, "Pont.: %d", pontuacao);
+        char *msg[] = { "Simulador", 
+                        "Encerrado", resultado };
+        display_text(msg, 3);
+        sleep_ms(3000);
     }
 }
