@@ -191,6 +191,21 @@ void atualizar_display_info() {
     display_text(msg, 4);
 }
 
+void resetar_estados() {
+    pontuacao = 0;
+    botao_a_liberado = true;
+    botao_b_liberado = true;
+    acionou_botao_durante_amarelo = false;
+    manteve_acelerando = false;
+    manteve_freando = false;
+    acao_valida = false;
+
+    last_time_vermelho = 0;
+    last_time_verde = 0;
+    last_time_amarelo = 0;
+    last_button_check = 0;
+}
+
 void start_simulator() {
     char *msg[] = {
         "  Pressione   ",
@@ -200,7 +215,8 @@ void start_simulator() {
     display_text(msg, 3);
 
     while (true) {
-        // Verifica se ambos os botões foram pressionados simultaneamente
+        resetar_estados();
+
         if (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
             sleep_ms(500);
             while (!gpio_get(BUTTON_A) && !gpio_get(BUTTON_B)) {
@@ -330,6 +346,8 @@ int main() {
                     sleep_ms(50);
                 }
                 desligar_leds();
+                gpio_put(LED_GREEN, 0);
+                gpio_put(LED_RED, 0);
                 break; 
             }
 
@@ -368,7 +386,7 @@ int main() {
             }
 
             if (pontuacao < 0) {
-                pontuacao = 0; 
+                pontuacao = 0;
                 char *msg[] = { "Voce perdeu", "Pontuacao 0" };
                 display_text(msg, 2);
                 sleep_ms(3000);
