@@ -9,6 +9,7 @@
 #include "inc/ssd1306.h"
 #include "hardware/i2c.h"
 
+// ------------------   Definições de pinagem e configuração ------------------//
 #define LED_GREEN 11   // GPIO conectado ao terminal verde do LED RGB
 #define LED_RED 13  // GPIO conectado ao terminal vermelho do LED RGB
 #define BUTTON_A 5    // GPIO conectado ao Botão A
@@ -284,7 +285,7 @@ void avaliar_acao(const char *acao) {
             acao_valida = true;
         } else {
             pontuacao--;
-            strcpy(feedback, "ERRO");
+            strcpy(feedback, "ERROU");
         }
     } else if (strcmp(acao, "frear") == 0) {
         strcpy(ultima_acao, "Vc freou");
@@ -294,7 +295,7 @@ void avaliar_acao(const char *acao) {
             acao_valida = true;
         } else {
             pontuacao--;
-            strcpy(feedback, "ERRO");
+            strcpy(feedback, "ERROU");
         }
     }
 }
