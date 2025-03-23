@@ -236,7 +236,7 @@ void atualizar_semaforo() {
 
         case SEMAFORO_AMARELO:
             if (agora - tempo_estado_anterior > TEMPO_AMARELO) {
-                if (!acionou_botao_durante_amarelo) {
+                if (!manteve_acelerando && !manteve_freando) {
                     pontuacao++;
                     strcpy(ultima_acao, "Esperou AMARELO");
                     strcpy(feedback, "Correto");
@@ -244,8 +244,6 @@ void atualizar_semaforo() {
                     strcpy(ultima_acao, "Agiu AMARELO");
                     strcpy(feedback, "Sem ponto");
                 }
-
-                acionou_botao_durante_amarelo = false;
 
                 estado_atual = SEMAFORO_VERMELHO;
                 setColor(141, 0, 0);
