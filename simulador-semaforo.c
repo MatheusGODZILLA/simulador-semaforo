@@ -56,6 +56,7 @@ bool botao_b_liberado = true;
 bool acionou_botao_durante_amarelo = false;
 bool manteve_acelerando = false;
 bool manteve_freando = false;
+bool acao_valida = false;
 
 char ultima_acao[22] = "";
 char feedback[22] = "";
@@ -201,7 +202,6 @@ void display_text(char *lines[], uint line_count) {
     render_on_display(ssd, &frame_area); 
 }
 
-
 void setup_oled(){
     // Inicialização do i2c
     i2c_init(i2c1, ssd1306_i2c_clock * 1000);
@@ -240,7 +240,7 @@ void setup_oled(){
 void start_simulator() {
     char *msg[] = {
         "  Pressione   ",
-        "    A e B     "
+        "    A e B     ",
         " Para Iniciar "
     };
     display_text(msg, 3);
@@ -259,18 +259,24 @@ void start_simulator() {
 }
 
 void avaliar_acao(const char *acao) {
+    acao_valida = false;
+
     if (strcmp(acao, "acelerar") == 0) {
         strcpy(ultima_acao, "Vc acelerou");
+        
         if (estado_atual == SEMAFORO_VERDE) {
             strcpy(feedback, "Mantenha");
+            acao_valida = true;
         } else {
             pontuacao--;
             strcpy(feedback, "ERRO");
         }
     } else if (strcmp(acao, "frear") == 0) {
         strcpy(ultima_acao, "Vc freou");
+        
         if (estado_atual == SEMAFORO_VERMELHO) {
             strcpy(feedback, "Mantenha");
+            acao_valida = true;
         } else {
             pontuacao--;
             strcpy(feedback, "ERRO");
@@ -331,12 +337,11 @@ int main() {
 
             // Controles dos botões
             if (!gpio_get(BUTTON_A)) {
-                gpio_put(LED_GREEN, 1);
-                gpio_put(LED_RED, 0);
-                
                 if (botao_a_liberado) {
                     avaliar_acao("acelerar");
                     botao_a_liberado = false;
+                    gpio_put(LED_GREEN, 1);
+                    gpio_put(LED_RED, 0);
                     manteve_acelerando = true;
                 }
                 if (estado_atual == SEMAFORO_AMARELO)
@@ -349,12 +354,11 @@ int main() {
 
             // Botao B
             if (!gpio_get(BUTTON_B)) {
-                gpio_put(LED_GREEN, 0);
-                gpio_put(LED_RED, 1);
-                
                 if (botao_b_liberado) {
                     avaliar_acao("frear");
                     botao_b_liberado = false;
+                    gpio_put(LED_GREEN, 0);
+                    gpio_put(LED_RED, 1);
                     manteve_freando = true;
                 }
                 if (estado_atual == SEMAFORO_AMARELO)
@@ -376,8 +380,8 @@ int main() {
 
         char resultado[22];
         sprintf(resultado, " Pontuacao %d", pontuacao);
-        char *msg[] = { "  Simulador  ", 
-                        "  Encerrado  ", resultado };
+        char *msg[] = { " Simulador  ", 
+                        " Encerrado ", resultado };
         display_text(msg, 3);
         sleep_ms(3000);
     }
