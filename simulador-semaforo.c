@@ -63,6 +63,7 @@ char feedback[22] = "";
 
 uint32_t tempo_estado_anterior = 0;
 
+//--------------------   Setup dos componentes  --------------------//
 void setup_leds() {
     // Configuração do GPIO do LED como saída
     gpio_init(LED_GREEN);
@@ -87,7 +88,7 @@ void setup_buttons() {
     gpio_pull_up(BUTTON_B);
 }
 
-// Define a cor de todos os LEDs
+// Define a cor de todos os LEDs da matriz
 void setColor(uint8_t r, uint8_t g, uint8_t b) {
     for (uint i = 0; i < LED_COUNT; i++) {
         leds[i].R = r;
@@ -104,73 +105,6 @@ void npWrite() {
         pio_sm_put_blocking(np_pio, np_sm, leds[i].B);
     }
     sleep_us(100); // Tempo de reset
-}
-
-void atualizar_semaforo() {
-    uint32_t agora = time_us_32();
-
-    switch (estado_atual) {
-        case SEMAFORO_VERDE:
-            if (agora - tempo_estado_anterior > TEMPO_VERDE) {
-                // Avalia se manteve acelerando durante o VERDE
-                if (manteve_acelerando) {
-                    pontuacao++;
-                    strcpy(ultima_acao, "Acelerou VERDE");
-                    strcpy(feedback, "Correto");
-                } else {
-                    strcpy(ultima_acao, "Nao acelerou");
-                    strcpy(feedback, "Sem ponto");
-                }
-                manteve_acelerando = false;
-
-                estado_atual = SEMAFORO_AMARELO;
-                setColor(141, 141, 0);
-                npWrite();
-                tempo_estado_anterior = agora;
-            }
-            break;
-
-        case SEMAFORO_AMARELO:
-            if (agora - tempo_estado_anterior > TEMPO_AMARELO) {
-                // Avalia se ficou parado
-                if (!acionou_botao_durante_amarelo) {
-                    pontuacao++;
-                    strcpy(ultima_acao, "Esperou AMARELO");
-                    strcpy(feedback, "Correto");
-                } else {
-                    strcpy(ultima_acao, "Agiu AMARELO");
-                    strcpy(feedback, "Sem ponto");
-                }
-
-                acionou_botao_durante_amarelo = false;
-
-                estado_atual = SEMAFORO_VERMELHO;
-                setColor(141, 0, 0);
-                npWrite();
-                tempo_estado_anterior = agora;
-            }
-            break;
-
-        case SEMAFORO_VERMELHO:
-            if (agora - tempo_estado_anterior > TEMPO_VERMELHO) {
-                // Avalia se manteve freando durante o VERMELHO
-                if (manteve_freando) {
-                    pontuacao++;
-                    strcpy(ultima_acao, "Freou VERMELHO");
-                    strcpy(feedback, "Correto");
-                } else {
-                    strcpy(ultima_acao, "Nao freou");
-                    strcpy(feedback, "Sem ponto");
-                }
-                manteve_freando = false;
-
-                estado_atual = SEMAFORO_VERDE;
-                setColor(0, 141, 0);
-                npWrite();
-                tempo_estado_anterior = agora;
-            }
-            break;
-    }
 }
 
 void desligar_leds() {
@@ -237,6 +171,25 @@ void setup_oled(){
     display_text(text, 2);
 }
 
+void atualizar_display_info() {
+    char linha1[22];
+    char linha2[22];
+    sprintf(linha1, "Pont %d", pontuacao);
+    sprintf(linha2, "Sinal %s",
+        estado_atual == SEMAFORO_VERDE ? "VERDE" :
+        estado_atual == SEMAFORO_AMARELO ? "AMARELO" : "VERMELHO"
+    );
+
+    char *msg[] = {
+        linha1,
+        linha2,
+        ultima_acao[0] ? ultima_acao : "Aguardando",
+        feedback[0] ? feedback : ""
+    };
+    display_text(msg, 4);
+}
+
+//--------------------   Lógica do jogo  --------------------//
 void start_simulator() {
     char *msg[] = {
         "  Pressione   ",
@@ -255,6 +208,70 @@ void start_simulator() {
             break;
         }
         sleep_ms(20);
+    }
+}
+
+void atualizar_semaforo() {
+    uint32_t agora = time_us_32();
+
+    switch (estado_atual) {
+        case SEMAFORO_VERDE:
+            if (agora - tempo_estado_anterior > TEMPO_VERDE) {
+                if (manteve_acelerando) {
+                    pontuacao++;
+                    strcpy(ultima_acao, "Acelerou VERDE");
+                    strcpy(feedback, "Correto");
+                } else {
+                    strcpy(ultima_acao, "Nao acelerou");
+                    strcpy(feedback, "Sem ponto");
+                }
+                manteve_acelerando = false;
+
+                estado_atual = SEMAFORO_AMARELO;
+                setColor(141, 141, 0);
+                npWrite();
+                tempo_estado_anterior = agora;
+            }
+            break;
+
+        case SEMAFORO_AMARELO:
+            if (agora - tempo_estado_anterior > TEMPO_AMARELO) {
+                if (!acionou_botao_durante_amarelo) {
+                    pontuacao++;
+                    strcpy(ultima_acao, "Esperou AMARELO");
+                    strcpy(feedback, "Correto");
+                } else {
+                    strcpy(ultima_acao, "Agiu AMARELO");
+                    strcpy(feedback, "Sem ponto");
+                }
+
+                acionou_botao_durante_amarelo = false;
+
+                estado_atual = SEMAFORO_VERMELHO;
+                setColor(141, 0, 0);
+                npWrite();
+                tempo_estado_anterior = agora;
+            }
+            break;
+
+        case SEMAFORO_VERMELHO:
+            if (agora - tempo_estado_anterior > TEMPO_VERMELHO) {
+                if (manteve_freando) {
+                    pontuacao++;
+                    strcpy(ultima_acao, "Freou VERMELHO");
+                    strcpy(feedback, "Correto");
+                } else {
+                    strcpy(ultima_acao, "Nao freou");
+                    strcpy(feedback, "Sem ponto");
+                }
+                manteve_freando = false;
+
+                estado_atual = SEMAFORO_VERDE;
+                setColor(0, 141, 0);
+                npWrite();
+                tempo_estado_anterior = agora;
+            }
+            break;
     }
 }
 
@@ -282,24 +299,6 @@ void avaliar_acao(const char *acao) {
             strcpy(feedback, "ERRO");
         }
     }
-}
-
-void atualizar_display_info() {
-    char linha1[22];
-    char linha2[22];
-    sprintf(linha1, "Pont %d", pontuacao);
-    sprintf(linha2, "Sinal %s",
-        estado_atual == SEMAFORO_VERDE ? "VERDE" :
-        estado_atual == SEMAFORO_AMARELO ? "AMARELO" : "VERMELHO"
-    );
-
-    char *msg[] = {
-        linha1,
-        linha2,
-        ultima_acao[0] ? ultima_acao : "Aguardando",
-        feedback[0] ? feedback : ""
-    };
-    display_text(msg, 4);
 }
 
 int main() {
