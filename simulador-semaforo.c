@@ -172,6 +172,7 @@ void setup_oled(){
     display_text(text, 2);
 }
 
+//--------------------   Lógica do jogo  --------------------//
 void atualizar_display_info() {
     char linha1[22];
     char linha2[22];
@@ -190,7 +191,6 @@ void atualizar_display_info() {
     display_text(msg, 4);
 }
 
-//--------------------   Lógica do jogo  --------------------//
 void start_simulator() {
     char *msg[] = {
         "  Pressione   ",
@@ -365,6 +365,17 @@ int main() {
                 botao_b_liberado = true;
                 gpio_put(LED_GREEN, 0);
                 gpio_put(LED_RED, 0);
+            }
+
+            if (pontuacao < 0) {
+                pontuacao = 0; 
+                char *msg[] = { "Voce perdeu", "Pontuacao 0" };
+                display_text(msg, 2);
+                sleep_ms(3000);
+                desligar_leds();
+                gpio_put(LED_GREEN, 0);
+                gpio_put(LED_RED, 0);
+                break;
             }
 
             // Atualiza OLED com pontuação, estado do semáforo e última ação
