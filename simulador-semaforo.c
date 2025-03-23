@@ -114,8 +114,8 @@ void atualizar_semaforo() {
                 // Avalia se manteve acelerando durante o VERDE
                 if (manteve_acelerando) {
                     pontuacao++;
-                    strcpy(ultima_acao, "Acelerou no VERDE");
-                    strcpy(feedback, "Correto! +1 ponto");
+                    strcpy(ultima_acao, "Acelerou VERDE");
+                    strcpy(feedback, "Correto");
                 } else {
                     strcpy(ultima_acao, "Nao acelerou");
                     strcpy(feedback, "Sem ponto");
@@ -134,10 +134,10 @@ void atualizar_semaforo() {
                 // Avalia se ficou parado
                 if (!acionou_botao_durante_amarelo) {
                     pontuacao++;
-                    strcpy(ultima_acao, "Esperou no AMARELO");
-                    strcpy(feedback, "Correto! +1 ponto");
+                    strcpy(ultima_acao, "Esperou AMARELO");
+                    strcpy(feedback, "Correto");
                 } else {
-                    strcpy(ultima_acao, "Agiu no AMARELO");
+                    strcpy(ultima_acao, "Agiu AMARELO");
                     strcpy(feedback, "Sem ponto");
                 }
 
@@ -155,8 +155,8 @@ void atualizar_semaforo() {
                 // Avalia se manteve freando durante o VERMELHO
                 if (manteve_freando) {
                     pontuacao++;
-                    strcpy(ultima_acao, "Freou no VERMELHO");
-                    strcpy(feedback, "Correto! +1 ponto");
+                    strcpy(ultima_acao, "Freou VERMELHO");
+                    strcpy(feedback, "Correto");
                 } else {
                     strcpy(ultima_acao, "Nao freou");
                     strcpy(feedback, "Sem ponto");
@@ -198,7 +198,7 @@ void display_text(char *lines[], uint line_count) {
         ssd1306_draw_string(ssd, 10, y, lines[i]);  // Ajustado para não cortar
         y += 10; // Espaçamento maior para evitar sobreposição
     }
-    render_on_display(ssd, &frame_area);  // Atualiza o display
+    render_on_display(ssd, &frame_area); 
 }
 
 
@@ -230,18 +230,17 @@ void setup_oled(){
 
     // Exibir texto no display OLED
     char *text[] = {
-        " Bem-vindos! ",
         "  Simulador  ",
         " de Semaforo "
     };
 
-    display_text(text, 3);
+    display_text(text, 2);
 }
 
 void start_simulator() {
     char *msg[] = {
-        "   Pressione  ",
-        "     A e B    ",
+        "  Pressione   ",
+        "    A e B     "
         " Para Iniciar "
     };
     display_text(msg, 3);
@@ -263,18 +262,18 @@ void avaliar_acao(const char *acao) {
     if (strcmp(acao, "acelerar") == 0) {
         strcpy(ultima_acao, "Vc acelerou");
         if (estado_atual == SEMAFORO_VERDE) {
-            strcpy(feedback, "Mantenha...");
+            strcpy(feedback, "Mantenha");
         } else {
             pontuacao--;
-            strcpy(feedback, "ERRO!");
+            strcpy(feedback, "ERRO");
         }
     } else if (strcmp(acao, "frear") == 0) {
         strcpy(ultima_acao, "Vc freou");
         if (estado_atual == SEMAFORO_VERMELHO) {
-            strcpy(feedback, "Mantenha...");
+            strcpy(feedback, "Mantenha");
         } else {
             pontuacao--;
-            strcpy(feedback, "ERRO!");
+            strcpy(feedback, "ERRO");
         }
     }
 }
@@ -282,8 +281,8 @@ void avaliar_acao(const char *acao) {
 void atualizar_display_info() {
     char linha1[22];
     char linha2[22];
-    sprintf(linha1, "Pont.: %d", pontuacao);
-    sprintf(linha2, "Semaforo: %s",
+    sprintf(linha1, "Pont %d", pontuacao);
+    sprintf(linha2, "Sinal %s",
         estado_atual == SEMAFORO_VERDE ? "VERDE" :
         estado_atual == SEMAFORO_AMARELO ? "AMARELO" : "VERMELHO"
     );
@@ -291,7 +290,7 @@ void atualizar_display_info() {
     char *msg[] = {
         linha1,
         linha2,
-        ultima_acao[0] ? ultima_acao : "Aguardando...",
+        ultima_acao[0] ? ultima_acao : "Aguardando",
         feedback[0] ? feedback : ""
     };
     display_text(msg, 4);
@@ -311,7 +310,6 @@ int main() {
         start_simulator();
 
         printf("[LOG] Iniciando o semáforo...\n");
-        desligar_leds();
 
         estado_atual = SEMAFORO_VERDE;
         setColor(0, 141, 0);
@@ -333,11 +331,12 @@ int main() {
 
             // Controles dos botões
             if (!gpio_get(BUTTON_A)) {
+                gpio_put(LED_GREEN, 1);
+                gpio_put(LED_RED, 0);
+                
                 if (botao_a_liberado) {
                     avaliar_acao("acelerar");
                     botao_a_liberado = false;
-                    gpio_put(LED_GREEN, 1);
-                    gpio_put(LED_RED, 0);
                     manteve_acelerando = true;
                 }
                 if (estado_atual == SEMAFORO_AMARELO)
@@ -350,11 +349,12 @@ int main() {
 
             // Botao B
             if (!gpio_get(BUTTON_B)) {
+                gpio_put(LED_GREEN, 0);
+                gpio_put(LED_RED, 1);
+                
                 if (botao_b_liberado) {
                     avaliar_acao("frear");
                     botao_b_liberado = false;
-                    gpio_put(LED_GREEN, 0);
-                    gpio_put(LED_RED, 1);
                     manteve_freando = true;
                 }
                 if (estado_atual == SEMAFORO_AMARELO)
@@ -364,7 +364,6 @@ int main() {
                 gpio_put(LED_GREEN, 0);
                 gpio_put(LED_RED, 0);
             }
-
 
             // Atualiza OLED com pontuação, estado do semáforo e última ação
             atualizar_display_info();
@@ -376,9 +375,9 @@ int main() {
         }
 
         char resultado[22];
-        sprintf(resultado, "Pont.: %d", pontuacao);
-        char *msg[] = { "Simulador", 
-                        "Encerrado", resultado };
+        sprintf(resultado, " Pontuacao %d", pontuacao);
+        char *msg[] = { "  Simulador  ", 
+                        "  Encerrado  ", resultado };
         display_text(msg, 3);
         sleep_ms(3000);
     }
