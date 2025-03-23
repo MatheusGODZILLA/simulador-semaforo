@@ -200,10 +200,11 @@ void resetar_estados() {
     manteve_freando = false;
     acao_valida = false;
 
-    last_time_vermelho = 0;
-    last_time_verde = 0;
-    last_time_amarelo = 0;
-    last_button_check = 0;
+    estado_atual = SEMAFORO_VERMELHO;
+    tempo_estado_anterior = 0;
+
+    strcpy(ultima_acao, "");
+    strcpy(feedback, "");
 }
 
 void start_simulator() {
@@ -393,6 +394,7 @@ int main() {
                 desligar_leds();
                 gpio_put(LED_GREEN, 0);
                 gpio_put(LED_RED, 0);
+                resetar_estados();
                 break;
             }
 
