@@ -246,7 +246,7 @@ void atualizar_semaforo() {
                 manteve_acelerando = false;
 
                 estado_atual = SEMAFORO_AMARELO;
-                setColor(141, 141, 0);
+                setColor(128, 128, 0);
                 npWrite();
                 tempo_estado_anterior = agora;
             }
@@ -264,7 +264,7 @@ void atualizar_semaforo() {
                 }
 
                 estado_atual = SEMAFORO_VERMELHO;
-                setColor(141, 0, 0);
+                setColor(128, 0, 0);
                 npWrite();
                 tempo_estado_anterior = agora;
             }
@@ -283,7 +283,7 @@ void atualizar_semaforo() {
                 manteve_freando = false;
 
                 estado_atual = SEMAFORO_VERDE;
-                setColor(0, 141, 0);
+                setColor(0, 128, 0);
                 npWrite();
                 tempo_estado_anterior = agora;
             }
@@ -333,7 +333,7 @@ int main() {
         printf("[LOG] Iniciando o semáforo...\n");
 
         estado_atual = SEMAFORO_VERDE;
-        setColor(0, 141, 0);
+        setColor(0, 128, 0);
         npWrite();
         tempo_estado_anterior = time_us_32();
         pontuacao = 0;
