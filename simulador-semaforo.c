@@ -356,6 +356,7 @@ int main() {
             if (!gpio_get(BUTTON_A)) {
                 if (botao_a_liberado) {
                     avaliar_acao("acelerar");
+                    printf("[LOG] Acelerando...\n");
                     botao_a_liberado = false;
                     gpio_put(LED_GREEN, 1);
                     gpio_put(LED_RED, 0);
@@ -373,6 +374,7 @@ int main() {
             if (!gpio_get(BUTTON_B)) {
                 if (botao_b_liberado) {
                     avaliar_acao("frear");
+                    printf("[LOG] Freando...\n");
                     botao_b_liberado = false;
                     gpio_put(LED_GREEN, 0);
                     gpio_put(LED_RED, 1);
